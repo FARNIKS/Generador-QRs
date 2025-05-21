@@ -26,15 +26,26 @@
                <HBox.margin>
                   <Insets right="5.0" />
                </HBox.margin>
+               <font>
+                  <Font size="14.0" />
+               </font>
             </Label>
-            <TextField prefHeight="25.0" prefWidth="353.0" />
+            <TextField prefHeight="25.0" prefWidth="353.0" promptText="Contenido para QR" style="-fx-background-radius: 10;">
+               <font>
+                  <Font size="14.0" />
+               </font></TextField>
          </children>
       </HBox>
-      <HBox alignment="CENTER" prefHeight="365.0" prefWidth="450.0">
+      <VBox alignment="CENTER">
          <children>
             <ImageView fitHeight="350.0" fitWidth="350.0" pickOnBounds="true" preserveRatio="true" />
+            <Label text="..." textFill="#da0000">
+               <font>
+                  <Font name="Century Gothic Bold" size="16.0" />
+               </font>
+            </Label>
          </children>
-      </HBox>
+      </VBox>
       <HBox alignment="CENTER" prefHeight="51.0" prefWidth="450.0">
          <children>
             <Button mnemonicParsing="false" style="-fx-background-radius: 15;" text="Generar QR">
