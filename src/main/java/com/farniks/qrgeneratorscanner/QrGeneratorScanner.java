@@ -6,6 +6,8 @@ import com.google.zxing.client.j2se.MatrixToImageWriter;
 import com.google.zxing.common.BitMatrix;
 import com.google.zxing.common.HybridBinarizer;
 import com.google.zxing.qrcode.QRCodeWriter;
+import javafx.event.ActionEvent;
+import javafx.scene.control.Alert;
 
 import javax.imageio.ImageIO;
 import javax.swing.*;
@@ -95,4 +97,19 @@ public class QrGeneratorScanner {
     }
 
 
+    public void generateQRCode(ActionEvent actionEvent) {
+     
+    }
+
+    public void goLink(ActionEvent actionEvent) {
+
+    }
+
+    public void exportCode(ActionEvent actionEvent) {
+
+    }
+
+    public void scanQRCodeFromFileAction(ActionEvent actionEvent) {
+
+    }
 }
