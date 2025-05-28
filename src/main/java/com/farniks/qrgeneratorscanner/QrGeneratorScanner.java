@@ -8,24 +8,40 @@ import com.google.zxing.common.HybridBinarizer;
 import com.google.zxing.qrcode.QRCodeWriter;
 import javafx.event.ActionEvent;
 import javafx.scene.control.Alert;
+import javafx.scene.control.Button;
+import javafx.scene.control.Label;
+import javafx.scene.control.TextField;
+import javafx.scene.image.Image;
+import javafx.scene.image.ImageView;
+import javafx.scene.input.Clipboard;
+import javafx.scene.input.ClipboardContent;
+import javafx.stage.FileChooser;
+import javafx.stage.Stage;
 
 import javax.imageio.ImageIO;
 import javax.swing.*;
+import java.awt.*;
 import java.awt.image.BufferedImage;
+import java.io.ByteArrayInputStream;
+import java.io.ByteArrayOutputStream;
 import java.io.File;
 import java.io.IOException;
+import java.net.URI;
 
 
 public class QrGeneratorScanner {
 
-    private static JTextField urlFild;
-    private static JLabel qrCodeLabel;
+    public TextField linkTextField;
+    public ImageView qrIcon;
+    public Label contentQRLabel;;
+    public Button generatorQRButton, scanerQRButton, exportQRButton, goLinkButton, copyLinkButton;
+
     private static BufferedImage qrCodeImage;
 
-    private static void generateQRCode() {
-        String url = urlFild.getText();
+    public void generateQRCode(ActionEvent actionEvent) {
+        String url = linkTextField.getText();
         if(url.isEmpty()){// Mensaje si no hay texto en el generador de QR
-            JOptionPane.showMessageDialog(null,"Por favor, ingresa una URL");
+            showAlert(Alert.AlertType.WARNING, "Sin contenido", "Por favor, ingresa una URL");
             return;
         }
 
@@ -36,80 +52,132 @@ public class QrGeneratorScanner {
 
             qrCodeImage = MatrixToImageWriter.toBufferedImage(bitMatrix);// La imagen creada en el formato QR se guarda en una imagen
 
-            ImageIcon qrIcon = new ImageIcon(qrCodeImage);// Se guarda la imagen creada en QR code para enviar al label
-            qrCodeLabel.setIcon(qrIcon);
+            Image fxImage = convertToFxImage(qrCodeImage);
+
+            qrIcon.setImage(fxImage);
 
         } catch (WriterException e) {// Si falla la eneracion del QR
-            JOptionPane.showMessageDialog(null,"Error al crear el codigo QR");
+            showAlert(Alert.AlertType.ERROR, "Error", "Error al crear el codigo QR");
             e.printStackTrace();
         }
 
     }
-    private static void exportCode() {
-        if(qrCodeImage == null){// Sale mensaje si le da al boton de exportar QR y no hay QR
-            JOptionPane.showMessageDialog(null,"Primero genera un QR");
+
+    private Image convertToFxImage(BufferedImage qrCodeImage) {
+        // Creamos un flujo de salida en memoria para guardar temporalmente los bytes de la imagen PNG
+        ByteArrayOutputStream os = new ByteArrayOutputStream();
+
+        try {
+            // Escribimos la imagen BufferedImage en el flujo de salida, en formato PNG
+            ImageIO.write(qrCodeImage, "png", os);
+
+            // Creamos un flujo de entrada con los datos en memoria (los bytes de la imagen)
+            ByteArrayInputStream is = new ByteArrayInputStream(os.toByteArray());
+
+            // Creamos y devolvemos una imagen JavaFX utilizando el flujo de entrada
+            return new Image(is);
+
+        } catch (IOException e) {
+            // Si ocurre un error al escribir o leer la imagen, lo mostramos en consola
+            e.printStackTrace();
+            // Y devolvemos null indicando que la conversión falló
+            return null;
+        }
+    }
+
+
+    public void exportCode(ActionEvent actionEvent) {
+        if (qrCodeImage == null) {
+            showAlert(Alert.AlertType.WARNING, "Advertencia", "Primero genera un QR");
             return;
         }
-        //Esto es para seleccionar donde vamos a guardar el QR
-        JFileChooser fileChooser = new JFileChooser();
-        fileChooser.setDialogTitle("Guarda codigo QR");// Titulo de la ventana
-        fileChooser.setSelectedFile(new File("CodigoQR.png"));//Es el nombre predeterminado para guardar el QR en formato .png
 
-        int userSelection = fileChooser.showSaveDialog(null);
+        FileChooser fileChooser = new FileChooser();
+        fileChooser.setTitle("Guardar código QR");
+        fileChooser.setInitialFileName("CodigoQR.png");
+        fileChooser.getExtensionFilters().add(new FileChooser.ExtensionFilter("Imagen PNG", "*.png"));
 
-        if(userSelection == JFileChooser.APPROVE_OPTION){// Si le da clic en afectar guarda el archivo con ese nombre
-            File fileToSave = fileChooser.getSelectedFile();
-
+        File file = fileChooser.showSaveDialog(getStage());
+        if (file != null) {
             try {
-                ImageIO.write(qrCodeImage, "PNG",fileToSave);// Para guardar la imagen tomando encuenta fileToSave
-                JOptionPane.showMessageDialog(null,"Codigo QR, Exportado correctamente");
-
-            }catch (IOException e) {
-                JOptionPane.showMessageDialog(null,"Error al exportar el codigo QR");
+                ImageIO.write(qrCodeImage, "PNG", file);
+                showAlert(Alert.AlertType.INFORMATION, "Éxito", "Código QR exportado correctamente");
+            } catch (IOException e) {
+                showAlert(Alert.AlertType.ERROR, "Error", "No se pudo guardar el archivo");
                 e.printStackTrace();
             }
         }
     }
 
-    private void scanQRCodeFromFile() {
-        JFileChooser fileChooser = new JFileChooser();
-        fileChooser.setDialogTitle("Selecciona una imagen PNG con código QR");
-        int result = fileChooser.showOpenDialog(null);
+    public void scanQRCodeFromFileAction(ActionEvent actionEvent) {
+        FileChooser fileChooser = new FileChooser();
+        fileChooser.setTitle("Selecciona una imagen PNG con código QR");
+        fileChooser.getExtensionFilters().add(new FileChooser.ExtensionFilter("Imagen PNG", "*.png"));
 
-        if (result == JFileChooser.APPROVE_OPTION) {
-            File file = fileChooser.getSelectedFile();
+        File file = fileChooser.showOpenDialog(getStage());
+
+        if (file != null) {
             try {
                 BufferedImage bufferedImage = ImageIO.read(file);
                 LuminanceSource source = new BufferedImageLuminanceSource(bufferedImage);
                 BinaryBitmap bitmap = new BinaryBitmap(new HybridBinarizer(source));
-
                 Result qrResult = new MultiFormatReader().decode(bitmap);
+
                 String decodedText = qrResult.getText();
-                JOptionPane.showMessageDialog(null, "Contenido del QR: " + decodedText);
-                urlFild.setText(decodedText);
-                qrCodeLabel.setIcon(new ImageIcon(bufferedImage)); // Mostrar el QR leído
+                contentQRLabel.setText(decodedText);
+                linkTextField.setText(decodedText);
+                qrIcon.setImage(convertToFxImage(bufferedImage));
 
             } catch (IOException | NotFoundException e) {
-                JOptionPane.showMessageDialog(null, "No se pudo leer el código QR de la imagen");
+                showAlert(Alert.AlertType.ERROR, "Error", "No se pudo leer el código QR");
                 e.printStackTrace();
             }
         }
     }
 
 
-    public void generateQRCode(ActionEvent actionEvent) {
-     
-    }
-
     public void goLink(ActionEvent actionEvent) {
+        String content = contentQRLabel.getText().trim();
 
+        // Verifica si el contenido comienza con "http://" o "https://"
+        if (!content.startsWith("http://") && !content.startsWith("https://")) {
+            showAlert(Alert.AlertType.WARNING, "Enlace inválido", "El contenido no es un enlace válido.");
+            return;
+        }
+
+        // Intenta abrir el enlace en el navegador
+        try {
+            Desktop.getDesktop().browse(new URI(content));
+        } catch (Exception e) {
+            showAlert(Alert.AlertType.ERROR, "Error", "No se pudo abrir el enlace.");
+            e.printStackTrace();
+        }
     }
 
-    public void exportCode(ActionEvent actionEvent) {
-
+    private Stage getStage() {
+        return (Stage) linkTextField.getScene().getWindow();
+    }
+    private void showAlert(Alert.AlertType type, String title, String message) {
+        Alert alert = new Alert(type);
+        alert.setTitle(title);
+        alert.setHeaderText(null);
+        alert.setContentText(message);
+        alert.showAndWait();
     }
 
-    public void scanQRCodeFromFileAction(ActionEvent actionEvent) {
+    public void copyLink(ActionEvent actionEvent) {
+        String textToCopy = contentQRLabel.getText();
 
+        if (textToCopy == null || textToCopy.isEmpty()) {
+            showAlert(Alert.AlertType.WARNING, "Sin contenido", "No hay contenido para copiar.");
+            return;
+        }
+
+        Clipboard clipboard = Clipboard.getSystemClipboard();
+        ClipboardContent content = new ClipboardContent();
+        content.putString(textToCopy);
+        clipboard.setContent(content);
+
+        showAlert(Alert.AlertType.INFORMATION, "Copiado", "Contenido copiado al portapapeles.");
     }
 }
